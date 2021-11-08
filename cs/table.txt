@@ -1,0 +1,114 @@
+{{if .PK}}{{template "id.txt" .}}
+{{else if .Key}}{{template "key.txt" .}}
+{{end}}
+	public partial class {{.ModelName}} : {{.Schema.Database.Config.Namespace}}.IInitializerFrom<{{.Schema.Database.Config.Namespace}}.SelectDataRecordParameters>
+	{
+{{if .PK}}		public {{.PK.ModelName}}{{if isnullable .PK.Column.Type}}?{{end}} {{.PK.ModelName}};
+{{else if .Key}}		public {{.Key.ModelName}} {{.Key.ModelName}};
+{{end}}{{range .Columns}}{{if (not .PK)}}		public {{if .FK}}{{.FK.ModelName}}{{else}}{{modeltype .Type}}{{end}} {{.ModelName}};
+{{end}}{{end}}
+		void {{.Schema.Database.Config.Namespace}}.IInitializerFrom<{{.Schema.Database.Config.Namespace}}.SelectDataRecordParameters>.InitializeFrom({{.Schema.Database.Config.Namespace}}.SelectDataRecordParameters parameters)
+		{
+{{range $FieldIndex, $Field := .Columns}}			{{$Field.ModelName}} = parameters.DataRecord.IsDBNull(parameters.StartingOrdinal + {{$FieldIndex}}) ? default : parameters.DataRecord.{{datareaderfunc $Field.Type}}(parameters.StartingOrdinal + {{$FieldIndex}});
+{{end}}		}
+	}
+
+/*	public static partial class Sql{{.Schema.Database.ModelName}}Repo
+	{
+{{if .PK}}		public static System.Threading.Tasks.ValueTask<{{.ModelName}}> Get{{.ModelName}}ByID(System.Data.IDbConnection connection, {{.PK.ModelName}} id, System.Threading.CancellationToken cancellationToken = default)
+		{
+			using (var command = connection.CreateCommand())
+			{
+				command.CommandText = "SELECT {{range $ColumnIndex, $Column := .Columns}}{{if (gt $ColumnIndex 0)}}, {{end}}{{$Column.SQLName}}{{end}} FROM {{.SQLName}} WHERE {{.PK.SQLName}} = @id";
+
+				var idParameter = command.CreateParameter();
+				idParameter.ParameterName = "id";
+				idParameter.Value = ({{basemodeltype .PK.Column.Type}})id;
+				command.Parameters.Add(idParameter);
+
+				using (var reader = command.ExecuteReader(System.Data.CommandBehavior.SingleRow))
+				{
+					if (!reader.Read())
+						return default;
+
+					var record = new {{.ModelName}}();
+
+					new SelectDataRecordParameters(reader, 0).Initialize(record);
+
+					return new System.Threading.Tasks.ValueTask<{{.ModelName}}>(record);
+				}
+			}
+		}
+{{end}}{{range .Columns}}{{if .FK}}{{$FKColumn := .}}
+		public static System.Threading.Tasks.ValueTask<IEnumerable<{{.Table.ModelName}}>> Get{{pluralize .Table.ModelName}}By{{.ModelName}}(System.Data.IDbConnection connection, {{.FK.ModelName}} id, System.Threading.CancellationToken cancellationToken = default)
+		{
+			using (var command = connection.CreateCommand())
+			{
+				command.CommandText = "SELECT {{range $ColumnIndex, $Column := .Table.Columns}}{{if (gt $ColumnIndex 0)}}, {{end}}{{$Column.SQLName}}{{end}} FROM {{.Table.SQLName}} WHERE {{.SQLName}} = @id;";
+
+				var idParameter = command.CreateParameter();
+				idParameter.ParameterName = "id";
+				idParameter.Value = ({{basemodeltype .FK.Column.Type}})id;
+				command.Parameters.Add(idParameter);
+
+				using (var reader = command.ExecuteReader(System.Data.CommandBehavior.SingleResult))
+				{
+					var results = new List<{{.Table.ModelName}}>();
+
+					var parameters = new SelectDataRecordParameters(reader, 0);
+
+					while (reader.Read())
+					{
+						var record = new {{.Table.ModelName}}();
+
+						parameters.Initialize(record);
+
+						results.Add(record);
+					}
+
+					return new System.Threading.Tasks.ValueTask<IEnumerable<{{.Table.ModelName}}>>(results);
+				}
+			}
+		}
+		
+		public static System.Threading.Tasks.ValueTask<IEnumerable<{{.Table.ModelName}}>> Get{{pluralize .Table.ModelName}}By{{pluralize .ModelName}}(System.Data.IDbConnection connection, IEnumerable<{{.FK.ModelName}}> ids, System.Threading.CancellationToken cancellationToken = default)
+		{
+			using (var command = connection.CreateCommand())
+			{
+				command.CommandText = String.Format(
+					"SELECT {{range $ColumnIndex, $Column := .Table.Columns}}{{if (gt $ColumnIndex 0)}}, {{end}}{{$Column.SQLName}}{{end}} FROM {{.Table.SQLName}} WHERE {{.SQLName}} IN ({0});",
+					String.Join(
+						", ",
+						ids.Select((id, n) => String.Concat("@id", n))
+					)
+				);
+
+				foreach (var idAndIndex in ids.Select((id, n) => ValueTuple.Create(id, n)))
+				{
+					var idParameter = command.CreateParameter();
+					idParameter.ParameterName = String.Concat("id", idAndIndex.Item2);
+					idParameter.Value = ({{basemodeltype .FK.Column.Type}})idAndIndex.Item1;
+					command.Parameters.Add(idParameter);
+				}
+
+				using (var reader = command.ExecuteReader(System.Data.CommandBehavior.SingleResult))
+				{
+					var results = new List<{{.Table.ModelName}}>();
+
+					var parameters = new SelectDataRecordParameters(reader, 0);
+
+					while (reader.Read())
+					{
+						var record = new {{.Table.ModelName}}();
+
+						parameters.Initialize(record);
+
+						results.Add(record);
+					}
+
+					return new System.Threading.Tasks.ValueTask<IEnumerable<{{.Table.ModelName}}>>(results);
+				}
+			}
+		}
+{{end}}{{end}}	}
+*/

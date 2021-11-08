@@ -1,0 +1,4 @@
+{{range .Schemas}}namespace {{.Database.Config.Namespace}}{{if .Database.ModelName}}.{{.Database.ModelName}}{{end}}{{if .ModelName}}.{{.ModelName}}{{end}}
+{
+{{range .Tables}}{{template "table.txt" .}}
+{{end}}{{end}}}

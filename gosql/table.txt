@@ -1,0 +1,100 @@
+{{if .PK}}type {{.PK.ModelName}} struct {
+	Value {{modeltype .PK.Column.Type}}
+}
+
+func (id *{{.PK.ModelName}}) AppendFields(fs []interface{}) []interface{} {
+	return append(fs, &id.Value)
+}
+
+func (id {{.PK.ModelName}}) AppendValues(vs []interface{}) []interface{} {
+	return append(vs, id.Value)
+}
+
+func (id {{.PK.ModelName}}) AppendSQLTypes(ts []sqltypes.Type) []sqltypes.Type {
+	return append(ts, {{printf "%#v" .PK.Column.Type}})
+}
+
+{{else if .Key}}type {{.Key.ModelName}} struct {
+{{range .Key.IDs}}	{{.ModelName}} {{modeltype .Column.Type}}
+{{end}}}
+
+func (key *{{.Key.ModelName}}) AppendFields(fs []interface{}) []interface{} {
+	return append(fs{{range .Key.IDs}}, &key.{{.ModelName}}{{end}})
+}
+
+var namesOf{{.Key.ModelName}}Fields = []string {
+{{range .Key.IDs}}	"{{.ModelName}}",
+{{end}}}
+
+func (key {{.Key.ModelName}}) AppendNames(ns []string) []string {
+	return append(ns, namesOf{{.Key.ModelName}}Fields...)
+}
+
+func (key {{.Key.ModelName}}) AppendValues(vs []interface{}) []interface{} {
+	return append(vs{{range .Key.IDs}}, key.{{.ModelName}}{{end}})
+}
+
+func (key {{.Key.ModelName}}) AppendSQLTypes(ts []sqltypes.Type) []sqltypes.Type {
+	return append(ts{{range .Key.IDs}}, {{printf "%#v" .Column.Type}}{{end}})
+}
+
+{{end}}type {{.ModelName}} struct {
+{{if .PK}}	{{.PK.ModelName}} {{.PK.ModelName}}
+{{else if .Key}}	{{.Key.ModelName}} {{.Key.ModelName}}
+{{end}}{{range .Columns}}{{if (not .PK)}}	{{.ModelName}} {{if .FK}}{{.FK.ModelName}}{{else}}{{modeltype .Type}}{{end}}
+{{end}}{{end}}}
+{{if .PK}}
+func (m *{{.ModelName}}) ID() sqlstream.Model {
+	return sqlstream.ModelWithNames(&m.{{.PK.ModelName}}, "{{.PK.ModelName}}")
+}
+{{else if .Key}}
+func (m *{{.ModelName}}) ID() sqlstream.Model {
+	return sqlstream.ModelWithNames(&m.{{.Key.ModelName}}{{range .Key.IDs}}, "{{.ModelName}}"{{end}})
+}
+{{end}}
+func (m *{{.ModelName}}) AppendFields(fs []interface{}) []interface{} {
+{{range (allmodelcolumns .)}}
+	{{- if (eq .Kind "pk")}}	fs = m.{{.Path}}.AppendFields(fs)
+	{{- else if (eq .Kind "key")}}	fs = append(fs, &m.{{.Path}})
+	{{- else if (eq .Kind "fk")}}	fs = m.{{.Path}}.AppendFields(fs)
+	{{- else}}	fs = append(fs, &m.{{.Path}})
+	{{- end}}
+{{end}}	return fs
+}
+
+var namesOf{{.ModelName}}Fields = []string{
+{{range .Columns}}	"{{.ModelName}}",
+{{end}}}
+
+func (m {{.ModelName}}) AppendNames(ns []string) []string {
+	return append(ns, namesOf{{.ModelName}}Fields...)
+}
+
+func (m {{.ModelName}}) AppendValues(vs []interface{}) []interface{} {
+{{range (allmodelcolumns .)}}
+	{{- if (eq .Kind "pk")}}	vs = m.{{.Path}}.AppendValues(vs)
+	{{- else if (eq .Kind "key")}}	vs = append(vs, m.{{.Path}})
+	{{- else if (eq .Kind "fk")}}	vs = m.{{.Path}}.AppendValues(vs)
+	{{- else}}	vs = append(vs, m.{{.Path}})
+	{{- end}}
+{{end}}	return vs
+}
+
+var sqlNamesOf{{.ModelName}}Fields = []string{
+{{range .Columns}}	"{{.SQLName}}",
+{{end}}}
+
+func (m {{.ModelName}}) AppendSQLNames(ns []string) []string {
+	return append(ns, sqlNamesOf{{.ModelName}}Fields...)
+}
+
+var typesOf{{.ModelName}}Fields = []sqltypes.Type{
+{{range .Columns}}	{{printf "%#v" .Type}},
+{{end}}}
+
+func (m {{.ModelName}}) AppendSQLTypes(ts []sqltypes.Type) []sqltypes.Type {
+	return append(ts, typesOf{{.ModelName}}Fields...)
+}
+
+func (m {{.ModelName}}) SQLTableName() string { return "{{if .Schema.SQLName}}{{.Schema.SQLName}}.{{end}}{{.SQLName}}" }
+

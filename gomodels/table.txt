@@ -1,0 +1,25 @@
+
+{{if .PK}}type {{.PK.ModelName}} struct {
+	Value {{modeltype .PK.Column.Type}}
+}
+
+{{else if .Key}}type {{.Key.ModelName}} struct {
+{{range .Key.IDs}}	{{.ModelName}} {{modeltype .Column.Type}}
+{{end}}}
+
+{{end}}{{if .Doc}}{{range (splitlines (textwrap (printf "%s %s" .ModelName .Doc) 77))}}// {{.}}
+{{end}}{{end}}type {{.ModelName}} struct {
+{{- range (allmodelcolumns .)}}
+	{{- if (eq .Kind "pk")}}
+	{{.Path}} {{.Path}}
+	{{- else if (eq .Kind "key")}}
+	{{.Column.ModelName}} {{modeltype .Column.Type}}
+	{{- else if (eq .Kind "fk")}}
+	{{trimsuffix .Path "ID"}} *{{.Column.FK.Column.Table.ModelName}}
+	{{- else}}
+	{{.Path}} {{modeltype .Column.Type}}
+	{{- end}}
+{{- end}}{{if .PK}}{{range .PK.Column.FKCols}}{{if (isassoctable .Table)}}
+	{{$Col2 := assockey .}}{{pluralize $Col2.FK.Column.Table.ModelName}} []*{{$Col2.FK.Column.Table.ModelName}}{{else}}
+	{{pluralize .Table.ModelName}} []*{{.Table.ModelName}}{{end}}{{end}}{{end}}
+}

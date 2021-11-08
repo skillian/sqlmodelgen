@@ -1,0 +1,7 @@
+package {{.Namespace}}
+
+import (
+{{range .Namespaces}}{{if .}}	"{{.}}"{{end}}
+{{end}})
+
+{{range .Databases}}{{template "database.txt" .}}{{end}}

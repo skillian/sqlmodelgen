@@ -1,0 +1,56 @@
+	public struct {{.PK.ModelName}}
+	{
+		{{$basemodeltype := basemodeltype .PK.Column.Type -}}
+		{{$eqcmptypes := (set "DateTime" "int" "long" "string") -}}
+		private readonly {{$basemodeltype}} value;
+
+		public {{.PK.ModelName}}({{$basemodeltype}} value)
+		{
+			this.value = value;
+		}
+{{if ($eqcmptypes.Contains $basemodeltype)}}
+		public static bool operator==({{.PK.ModelName}} a, {{.PK.ModelName}} b) => a.value == b.value;
+		public static bool operator!=({{.PK.ModelName}} a, {{.PK.ModelName}} b) => a.value != b.value;
+		
+		public static bool operator==({{.PK.ModelName}} a, {{$basemodeltype}} b) => a.value == b;
+		public static bool operator!=({{.PK.ModelName}} a, {{$basemodeltype}} b) => a.value != b;
+		
+		public static bool operator==({{$basemodeltype}} a, {{.PK.ModelName}} b) => a == b.value;
+		public static bool operator!=({{$basemodeltype}} a, {{.PK.ModelName}} b) => a != b.value;
+{{else}}
+		private static readonly Func<{{$basemodeltype}}, {{$basemodeltype}}, bool> idValueEquals
+			= System.Collections.Generic.EqualityComparer<{{$basemodeltype}}>.Default.Equals;
+
+		public static bool operator==({{.PK.ModelName}} a, {{.PK.ModelName}} b) => idValueEquals(a.value, b.value);
+		public static bool operator!=({{.PK.ModelName}} a, {{.PK.ModelName}} b) => !(a == b);
+
+		public static bool operator==({{.PK.ModelName}} a, {{$basemodeltype}} b) => idValueEquals(a.value, b);
+		public static bool operator!=({{.PK.ModelName}} a, {{$basemodeltype}} b) => !(a == b);
+
+		public static bool operator==({{$basemodeltype}} a, {{.PK.ModelName}} b) => idValueEquals(a, b.value);
+		public static bool operator!=({{$basemodeltype}} a, {{.PK.ModelName}} b) => !(a == b);
+{{end}}
+		public override bool Equals(object obj)
+		{
+			if (obj is {{.PK.ModelName}} id)
+				return this == id;
+
+			if (obj is {{$basemodeltype}} value)
+				return this == value;
+
+			return false;
+		}
+{{$nullabletypes := (set "DateTime?" "int?" "long?" "string") -}}
+{{if ($nullabletypes.Contains $basemodeltype)}}
+		public override int GetHashCode() => value?.GetHashCode() ?? 0;
+		public override string ToString() => value?.ToString();
+{{else}}
+		public override int GetHashCode() => value.GetHashCode();
+		public override string ToString() => value.ToString();
+{{end}}
+		public static implicit operator {{.PK.ModelName}}({{$basemodeltype}} value)
+			=> new {{.PK.ModelName}}(value);
+			
+		public static explicit operator {{$basemodeltype}}({{.PK.ModelName}} value)
+			=> value.value;
+	}

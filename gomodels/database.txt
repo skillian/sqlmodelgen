@@ -1,0 +1,1 @@
+{{range .Schemas}}{{range .Tables}}{{template "table.txt" .}}{{end}}{{end}}
