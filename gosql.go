@@ -95,7 +95,7 @@ func (goSQLModelContext) ModelType(t sqltypes.Type) (namespace, typename string,
 	return "", "interface{}", nil
 }
 
-func (goSQLModelContext) EnsureNamespaces(c *sqlstream.Config) []string {
+func (goSQLModelContext) EnsureNamespaces(c *sqlstream.MetaModel) []string {
 	nss := make([]string, 1, 2)
 	nss[0] = "github.com/skillian/expr/stream/sqlstream/sqltypes"
 dbLoop:

@@ -14,7 +14,7 @@ import (
 var (
 	WVAceModelContext interface {
 		ModelContext
-		ModelWriter
+		MetaModelWriter
 	} = wvAceModelContext{}
 )
 
@@ -22,7 +22,7 @@ type wvAceModelContext struct{}
 
 var _ interface {
 	ModelContext
-	ModelWriter
+	MetaModelWriter
 } = wvAceModelContext{}
 
 func (wvAceModelContext) ModelType(t sqltypes.Type) (namespace, typename string, err error) {
@@ -30,7 +30,7 @@ func (wvAceModelContext) ModelType(t sqltypes.Type) (namespace, typename string,
 	return
 }
 
-func (wvAceModelContext) WriteModel(w io.Writer, c *sqlstream.Config) (err error) {
+func (wvAceModelContext) WriteMetaModel(w io.Writer, c *sqlstream.MetaModel) (err error) {
 	if len(c.Databases) == 0 {
 		return errors.Errorf("at least one database is required")
 	}

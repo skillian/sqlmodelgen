@@ -1,11 +1,13 @@
 package sqlmodelgen
 
 import (
+	"context"
 	"io"
 	"io/fs"
 	"text/template"
 
 	//"github.com/skillian/expr/errors"
+	"github.com/skillian/expr/errors"
 	"github.com/skillian/expr/stream/sqlstream"
 	"github.com/skillian/expr/stream/sqlstream/config"
 	"github.com/skillian/expr/stream/sqlstream/sqltypes"
@@ -34,7 +36,7 @@ type TemplateFuncsAdder interface {
 // to inspect the initialized configuration and return namespaces that must
 // exist in the generated templates.
 type NamespaceEnsurer interface {
-	EnsureNamespaces(c *sqlstream.Config) []string
+	EnsureNamespaces(c *sqlstream.MetaModel) []string
 }
 
 // NamespaceOrganizer is an optional interface that ModelContexts can implement
@@ -48,10 +50,59 @@ type NamespaceOrganizer interface {
 	OrganizeNamespaces(ns []string) []string
 }
 
+// TemplateData combines a MetaModel and namespaces to be included at the
+// top of the template(s) being emitted.
+type TemplateData struct {
+	Namespace  string
+	Namespaces []string
+	*sqlstream.MetaModel
+}
+
+// TemplateDataFromMetaModel initializes TemplateData from a MetaModel and
+// a ModelContext.
+func TemplateDataFromMetaModel(mm *sqlstream.MetaModel, mc ModelContext) (TemplateData, error) {
+	nss := make(map[string]struct{}, 8)
+	for _, db := range mm.Databases {
+		for _, sch := range db.Schemas {
+			for _, tbl := range sch.Tables {
+				for _, col := range tbl.Columns {
+					ns, _, err := mc.ModelType(col.Type)
+					if err != nil {
+						return TemplateData{}, errors.ErrorfFrom(
+							err, "failed to get model type of column: %v.%v.%v.%v",
+							db.RawName, sch.RawName, tbl.RawName, col.RawName,
+						)
+					}
+					nss[ns] = struct{}{}
+				}
+			}
+		}
+	}
+	td := TemplateData{
+		MetaModel: mm,
+	}
+	if ens, ok := mc.(NamespaceEnsurer); ok {
+		for _, ns := range ens.EnsureNamespaces(mm) {
+			nss[ns] = struct{}{}
+		}
+	}
+	td.Namespaces = make([]string, 0, len(nss))
+	for ns := range nss {
+		if ns == "" {
+			continue
+		}
+		td.Namespaces = append(td.Namespaces, ns)
+	}
+	if org, ok := mc.(NamespaceOrganizer); ok {
+		td.Namespaces = org.OrganizeNamespaces(td.Namespaces)
+	}
+	return td, nil
+}
+
 // ModelWriter can be implemented instead of TemplateContext to write arbitrary
 // output right into an output file.
-type ModelWriter interface {
-	WriteModel(w io.Writer, c *sqlstream.Config) error
+type MetaModelWriter interface {
+	WriteMetaModel(w io.Writer, c *sqlstream.MetaModel) error
 }
 
 // ModelConfigWriter is like ModelWriter but can write the "unlinked"
@@ -59,4 +110,10 @@ type ModelWriter interface {
 // sqlstream.Config.
 type ModelConfigWriter interface {
 	WriteModelConfig(w io.Writer, c config.Config) error
+}
+
+// ModelConfigParser reads some optional configuration from r and parses
+// it into a model configuration.
+type ModelConfigParser interface {
+	ParseModelConfig(ctx context.Context, r io.Reader) (config.Config, error)
 }

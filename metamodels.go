@@ -12,9 +12,9 @@ import (
 	"github.com/skillian/expr/stream/sqlstream/sqltypes"
 )
 
-// ConfigFromJSON reads JSON data from the reader, r, and
-// instantiates a Config model from it.
-func ConfigFromJSON(r io.Reader, mc ModelContext) (*sqlstream.Config, error) {
+// ConfigFromJSON is a helper function that deserializes the Reader, r, into
+// a MetaModel.
+func MetaModelFromJSON(r io.Reader) (*sqlstream.MetaModel, error) {
 	data, err := ioutil.ReadAll(r)
 	if err != nil {
 		return nil, errors.Errorf1From(
@@ -25,15 +25,20 @@ func ConfigFromJSON(r io.Reader, mc ModelContext) (*sqlstream.Config, error) {
 		return nil, errors.Errorf1From(
 			err, "failed to parse %q as JSON", string(data))
 	}
-	c := &sqlstream.Config{}
-	if err = (&configBuilder{Config: c, ModelContext: mc}).init(&j); err != nil {
-		js, err2 := json.MarshalIndent(j, "", "\t")
+	return MetaModelFromConfig(j)
+}
+
+// MetaModelFromConfig transforms the acyclic config.Config into a MetaModel.
+func MetaModelFromConfig(c config.Config) (mm *sqlstream.MetaModel, err error) {
+	mm = &sqlstream.MetaModel{}
+	if err = (&metaModelBuilder{MetaModel: mm /*, ModelContext: mc*/}).init(&c); err != nil {
+		js, err2 := json.MarshalIndent(c, "", "\t")
 		if err2 != nil {
 			js = []byte("(error!)")
 			err = errors.Aggregate(
 				errors.Errorf1From(
 					err2, "failed to marshal %v into JSON",
-					data,
+					c,
 				),
 				err,
 			)
@@ -42,12 +47,12 @@ func ConfigFromJSON(r io.Reader, mc ModelContext) (*sqlstream.Config, error) {
 			err, "failed to initialize configuration "+
 				"from JSON:\n\n%q", string(js))
 	}
-	return c, nil
+	return
 }
 
-type configBuilder struct {
-	*sqlstream.Config
-	ModelContext
+type metaModelBuilder struct {
+	*sqlstream.MetaModel
+	//ModelContext
 	namespaces map[string]struct{}
 	caches     struct {
 		columns   []sqlstream.Column
@@ -60,15 +65,15 @@ type configBuilder struct {
 	}
 }
 
-func (b *configBuilder) init(c *config.Config) (err error) {
+func (b *metaModelBuilder) init(c *config.Config) (err error) {
 	b.namespaces = make(map[string]struct{}, 8)
 	tempIDs := make([]*sqlstream.TableID, 0, 16)
-	if err = b.Config.DatabaseNamers.Init(&c.DatabaseNamers); err != nil {
+	if err = b.MetaModel.DatabaseNamers.Init(&c.DatabaseNamers); err != nil {
 		return
 	}
-	b.Config.Namespace = c.Namespace
-	b.Config.Databases = make([]*sqlstream.Database, 0, len(c.Databases))
-	b.Config.DatabasesByName = make(map[string]*sqlstream.Database, len(c.Databases))
+	//b.MetaModel.Namespace = c.Namespace
+	b.MetaModel.Databases = make([]*sqlstream.Database, 0, len(c.Databases))
+	b.MetaModel.DatabasesByName = make(map[string]*sqlstream.Database, len(c.Databases))
 	for _, dbCfg := range c.Databases {
 		d, dbErr := b.newDatabase(&dbCfg)
 		if dbErr != nil {
@@ -100,21 +105,6 @@ func (b *configBuilder) init(c *config.Config) (err error) {
 								dbCfg.RawName, schCfg.RawName,
 								tblCfg.RawName, colCfg.RawName,
 							)
-						}
-						ns, _, err := b.ModelType(c.Type)
-						if err != nil {
-							return errors.ErrorfFrom(
-								err,
-								"failed to determine "+
-									"model type of "+
-									"column "+
-									"%s.%s.%s.%s",
-								dbCfg.RawName, schCfg.RawName,
-								tblCfg.RawName, colCfg.RawName,
-							)
-						}
-						if len(ns) > 0 {
-							b.namespaces[ns] = struct{}{}
 						}
 					}
 					if c.PK {
@@ -201,21 +191,6 @@ func (b *configBuilder) init(c *config.Config) (err error) {
 	}); err != nil {
 		return err
 	}
-	if ens, ok := b.ModelContext.(NamespaceEnsurer); ok {
-		for _, ns := range ens.EnsureNamespaces(b.Config) {
-			if ns == "" {
-				continue
-			}
-			b.namespaces[ns] = struct{}{}
-		}
-	}
-	b.Config.Namespaces = make([]string, 0, len(b.namespaces))
-	for ns := range b.namespaces {
-		b.Config.Namespaces = append(b.Config.Namespaces, ns)
-	}
-	if org, ok := b.ModelContext.(NamespaceOrganizer); ok {
-		b.Config.Namespaces = org.OrganizeNamespaces(b.Config.Namespaces)
-	}
 	return
 }
 
@@ -234,9 +209,9 @@ type dbSchemaTableColumn struct {
 	column  *sqlstream.Column
 }
 
-func (b *configBuilder) iterDBSchemaTableColumn(c *config.Config, f func(dbSchemaTableColumn) error) error {
+func (b *metaModelBuilder) iterDBSchemaTableColumn(c *config.Config, f func(dbSchemaTableColumn) error) error {
 	for _, dbCfg := range c.Databases {
-		db := b.Config.DatabasesByName[dbCfg.RawName]
+		db := b.MetaModel.DatabasesByName[dbCfg.RawName]
 		for _, schCfg := range dbCfg.Schemas {
 			schema := db.SchemasByName[schCfg.RawName]
 			for _, tblCfg := range schCfg.Tables {
@@ -258,7 +233,7 @@ func (b *configBuilder) iterDBSchemaTableColumn(c *config.Config, f func(dbSchem
 	return nil
 }
 
-func (b *configBuilder) getPathUp(path string, start *sqlstream.Table) (interface{}, error) {
+func (b *metaModelBuilder) getPathUp(path string, start *sqlstream.Table) (interface{}, error) {
 	hops := strings.Count(path, ".")
 	var root interface{}
 	switch hops {
@@ -269,14 +244,14 @@ func (b *configBuilder) getPathUp(path string, start *sqlstream.Table) (interfac
 	case 2:
 		root = start.Schema.Database
 	case 3:
-		root = start.Schema.Database.Config
+		root = start.Schema.Database.MetaModel
 	default:
 		return nil, errors.Errorf("%q does not seem to be a path")
 	}
 	return b.getPathDown(path, root)
 }
 
-func (b *configBuilder) getPathDown(path string, start interface{}) (interface{}, error) {
+func (b *metaModelBuilder) getPathDown(path string, start interface{}) (interface{}, error) {
 	parts := strings.Split(path, ".")
 	hop := start
 	var ok bool
@@ -285,7 +260,7 @@ func (b *configBuilder) getPathDown(path string, start interface{}) (interface{}
 		name := parts[0]
 		parts = parts[1:]
 		switch x := hop.(type) {
-		case *sqlstream.Config:
+		case *sqlstream.MetaModel:
 			hop, ok = x.DatabasesByName[name]
 		case *sqlstream.Database:
 			hop, ok = x.SchemasByName[name]
@@ -311,7 +286,7 @@ func (b *configBuilder) getPathDown(path string, start interface{}) (interface{}
 	return hop, nil
 }
 
-func (b *configBuilder) newColumn(t *sqlstream.Table, cfg *config.Column) (c *sqlstream.Column) {
+func (b *metaModelBuilder) newColumn(t *sqlstream.Table, cfg *config.Column) (c *sqlstream.Column) {
 	if len(b.caches.columns) == cap(b.caches.columns) {
 		b.caches.columns = make([]sqlstream.Column, 1024)
 	}
@@ -323,7 +298,7 @@ func (b *configBuilder) newColumn(t *sqlstream.Table, cfg *config.Column) (c *sq
 	return
 }
 
-func (b *configBuilder) newIDs(ids []*sqlstream.TableID) (keyIDs []*sqlstream.TableID) {
+func (b *metaModelBuilder) newIDs(ids []*sqlstream.TableID) (keyIDs []*sqlstream.TableID) {
 	const defaultKeyIDCap = 16
 	if len(b.caches.keyIDs)+len(ids) > cap(b.caches.keyIDs) {
 		if len(ids) > defaultKeyIDCap {
@@ -338,7 +313,7 @@ func (b *configBuilder) newIDs(ids []*sqlstream.TableID) (keyIDs []*sqlstream.Ta
 	return
 }
 
-func (b *configBuilder) newID(c *sqlstream.Column, cfg *config.Column) (id *sqlstream.TableID) {
+func (b *metaModelBuilder) newID(c *sqlstream.Column, cfg *config.Column) (id *sqlstream.TableID) {
 	if len(b.caches.ids) == cap(b.caches.ids) {
 		b.caches.ids = make([]sqlstream.TableID, 128)
 	}
@@ -352,7 +327,7 @@ func (b *configBuilder) newID(c *sqlstream.Column, cfg *config.Column) (id *sqls
 	return
 }
 
-func (b *configBuilder) newKey(t *sqlstream.Table, ids []*sqlstream.TableID) (key *sqlstream.TableKey) {
+func (b *metaModelBuilder) newKey(t *sqlstream.Table, ids []*sqlstream.TableID) (key *sqlstream.TableKey) {
 	if len(b.caches.keys) == cap(b.caches.keys) {
 		b.caches.keys = make([]sqlstream.TableKey, 16)
 	}
@@ -371,7 +346,7 @@ func (b *configBuilder) newKey(t *sqlstream.Table, ids []*sqlstream.TableID) (ke
 	return
 }
 
-func (b *configBuilder) newTable(s *sqlstream.Schema, c *config.Table) (t *sqlstream.Table) {
+func (b *metaModelBuilder) newTable(s *sqlstream.Schema, c *config.Table) (t *sqlstream.Table) {
 	if len(b.caches.tables) == cap(b.caches.tables) {
 		b.caches.tables = make([]sqlstream.Table, 128)
 	}
@@ -385,7 +360,7 @@ func (b *configBuilder) newTable(s *sqlstream.Schema, c *config.Table) (t *sqlst
 	return
 }
 
-func (b *configBuilder) newSchema(d *sqlstream.Database, c *config.Schema) (s *sqlstream.Schema) {
+func (b *metaModelBuilder) newSchema(d *sqlstream.Database, c *config.Schema) (s *sqlstream.Schema) {
 	if len(b.caches.schemas) == cap(b.caches.schemas) {
 		b.caches.schemas = make([]sqlstream.Schema, 8)
 	}
@@ -399,14 +374,14 @@ func (b *configBuilder) newSchema(d *sqlstream.Database, c *config.Schema) (s *s
 	return
 }
 
-func (b *configBuilder) newDatabase(c *config.Database) (d *sqlstream.Database, err error) {
+func (b *metaModelBuilder) newDatabase(c *config.Database) (d *sqlstream.Database, err error) {
 	if len(b.caches.databases) == cap(b.caches.databases) {
 		b.caches.databases = make([]sqlstream.Database, 4)
 	}
 	d = &b.caches.databases[0]
 	b.caches.databases = b.caches.databases[1:]
 	d.Doc = c.Doc
-	d.Config = b.Config
+	d.MetaModel = b.MetaModel
 	d.Names.InitFromConfig(c.CommonData.Names, &b.DatabaseNamers)
 	d.Schemas = make([]*sqlstream.Schema, 0, len(c.Schemas))
 	d.SchemasByName = make(map[string]*sqlstream.Schema, len(c.Schemas))
@@ -434,8 +409,3 @@ func (b *configBuilder) newDatabase(c *config.Database) (d *sqlstream.Database, 
 	}
 	return
 }
-
-type nopNamer struct{}
-
-func (nopNamer) Apply(s string) string { return s }
-func (nopNamer) Parse(s string) string { return s }
