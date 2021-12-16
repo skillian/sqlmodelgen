@@ -75,7 +75,7 @@ func (sqlStreamReflectorModelContext) ParseModelConfig(ctx context.Context, r io
 			sqlDB, d,
 		)
 	}
-	ctx, _ = expr.ValuesFromContextOrNew(context.Background())
+	ctx, _ = expr.ValuesFromContextOrNew(ctx)
 	cfg, err = re.Config(ctx, db)
 	if err != nil {
 		return cfg, errors.Errorf1From(

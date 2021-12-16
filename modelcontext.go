@@ -61,6 +61,9 @@ type TemplateData struct {
 // TemplateDataFromMetaModel initializes TemplateData from a MetaModel and
 // a ModelContext.
 func TemplateDataFromMetaModel(mm *sqlstream.MetaModel, mc ModelContext) (TemplateData, error) {
+	// TODO: I don't like this function here.  Maybe it should go into
+	// the main package?  It seems like it just does some helper work with
+	// the namespaces.  Maybe it just needs a better name?
 	nss := make(map[string]struct{}, 8)
 	for _, db := range mm.Databases {
 		for _, sch := range db.Schemas {

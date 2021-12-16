@@ -21,7 +21,7 @@ import (
 
 var (
 	logger = logging.GetLogger(
-		"expr",
+		"sqlmodelgen",
 		logging.LoggerHandler(
 			new(logging.ConsoleHandler),
 			logging.HandlerFormatter(logging.DefaultFormatter{}),
@@ -31,10 +31,11 @@ var (
 )
 
 type Args struct {
-	LogLevel      logging.Level
-	ConfigFile    string
-	ModelContexts []ArgModelContext
-	TemplateDir   string
+	LogLevel               logging.Level
+	ConfigFile             string
+	GeneratorModelContexts []ArgModelContext
+	TemplateModelContexts  []ArgModelContext
+	TemplateDir            string
 }
 
 func main() {
@@ -57,20 +58,34 @@ func main() {
 		argparse.Default("warn"),
 		argparse.Help(
 			"Specify the logging level.  Options include:\n\n"+
-				"\tverbose:\tMost detailed logging.  Usually "+
+				"\tverbose:  Most detailed logging.  Usually "+
 				"for troubleshooting tricky issues.\n"+
-				"\tdebug:\tSlightly less verbose than "+
+				"\tdebug:    Slightly less verbose than "+
 				"\"verbose\", but still detailed.\n"+
-				"\tinfo:\tShow informational messages that "+
+				"\tinfo:     Show informational messages that "+
 				"explain why a decision was made, but no "+
 				"action is necessary.\n"+
-				"\twarn:\tShow warning messages for errors "+
+				"\twarn:     Show warning messages for errors "+
 				"that were handled but might be a sign of "+
 				"something that has to be addressed "+
 				"(Default).\n"+
-				"\terror:\tOnly show unhandled errors.",
+				"\terror:    Only show unhandled errors.",
 		),
 	).MustBind(&args.LogLevel)
+	parser.MustAddArgument(
+		argparse.OptionStrings("-g", "--generator"),
+		argparse.MetaVar("TYPE", "OUTPUT_FILE"),
+		argparse.ActionFunc(generatorAction{}),
+		argparse.Nargs(2),
+		argparse.Help(
+			"Generate a JSON model which can be consumed by a "+
+				"template generator.  Supported options are:\n"+
+				"\tsql-reflector:  Generate a model from a "+
+				"SQL database\n"+
+				"\tdrawio:         Use a draw.io/"+
+				"diagrams.net ERD diagram",
+		),
+	).MustBind(&args.GeneratorModelContexts)
 	parser.MustAddArgument(
 		argparse.OptionStrings("-t", "--template"),
 		argparse.MetaVar("TYPE", "NAMESPACE", "OUTPUT_FILE"),
@@ -79,11 +94,16 @@ func main() {
 		argparse.Help(
 			"Generate templated output from the model.  "+
 				"Supported options are:\n"+
-				"\tgo-sql:\tGo SQL models\n"+
-				"\tgo-models:\tGo data models\n"+
-				"\tcs:\tC# SQL models",
+				"\tgo-sql:     Go SQL models\n"+
+				"\tgo-models:  Go data models\n"+
+				"\tcs:         C# SQL models\n"+
+				"\twvace:      Hyland OnBase WorkView ACE "+
+				"file\n",
 		),
-	).MustBind(&args.ModelContexts)
+	).MustBind(&args.TemplateModelContexts)
+
+	// TODO: Handle GeneratorModelContexts AND/OR TemplateModelContexts.
+
 	parser.MustAddArgument(
 		argparse.OptionStrings("-T", "--template-dir"),
 		argparse.Action("store"),
@@ -138,140 +158,145 @@ func Main(args Args) (Err error) {
 		mm = mm2
 		return
 	}
-	for _, amc := range args.ModelContexts {
-		var out io.WriteCloser
-		var err error
-		if amc.ModelFile == "" {
-			out = nopWriteCloser{os.Stdout}
-		} else {
-			out, err = os.Create(amc.ModelFile)
-			if err != nil {
-				return errors.Errorf1From(
-					err, "failed to create output file: %v",
-					amc.ModelFile,
-				)
-			}
-		}
-		switch mc := amc.ModelContext.(type) {
-		case sqlmodelgen.ModelConfigParser:
-			cfg, err := mc.ParseModelConfig(context.TODO(), configReader)
-			if err != nil {
-				return errors.Errorf1From(
-					err, "failed to parse model configuration from %v",
-					configReader,
-				)
-			}
-			// overwrite getMetaModel to use the model we just
-			// parsed from the configuration.  Note that now the
-			// io.Reader is ignored.
-			getMetaModel = func(r io.Reader) (mm2 *sqlstream.MetaModel, err error) {
-				if mm != nil {
-					return mm, nil
-				}
-				mm2, err = sqlmodelgen.MetaModelFromConfig(cfg)
+	for _, amcs := range [][]ArgModelContext{args.GeneratorModelContexts, args.TemplateModelContexts} {
+		for _, amc := range amcs {
+			var out io.WriteCloser
+			var err error
+			if amc.ModelFile == "" {
+				out = nopWriteCloser{os.Stdout}
+			} else {
+				out, err = os.Create(amc.ModelFile)
 				if err != nil {
-					return nil, errors.Errorf2From(
-						err, "failed to create %T from %v",
-						mm2, cfg,
+					return errors.Errorf1From(
+						err, "failed to create output file: %v",
+						amc.ModelFile,
 					)
 				}
-				mm = mm2
-				return
 			}
-			switch mc := mc.(type) {
-			case sqlmodelgen.ModelConfigWriter:
-				err = mc.WriteModelConfig(out, cfg)
+			switch mc := amc.ModelContext.(type) {
+			case sqlmodelgen.ModelConfigParser:
+				cfg, err := mc.ParseModelConfig(context.TODO(), configReader)
 				if err != nil {
-					return errors.Errorf2From(
-						err, "failed to write "+
-							"configuration %v to %v",
-						cfg, out,
+					return errors.Errorf1From(
+						err, "failed to parse model configuration from %v",
+						configReader,
 					)
 				}
-			case sqlmodelgen.MetaModelWriter:
-				mm, err = getMetaModel(nil) // parameter is ignored here.
+				// overwrite getMetaModel to use the model we just
+				// parsed from the configuration.  Note that now the
+				// io.Reader is ignored.
+				getMetaModel = func(r io.Reader) (mm2 *sqlstream.MetaModel, err error) {
+					if mm != nil {
+						return mm, nil
+					}
+					mm2, err = sqlmodelgen.MetaModelFromConfig(cfg)
+					if err != nil {
+						return nil, errors.Errorf2From(
+							err, "failed to create %T from %v",
+							mm2, cfg,
+						)
+					}
+					mm = mm2
+					return
+				}
+				switch mc := mc.(type) {
+				case sqlmodelgen.ModelConfigWriter:
+					err = mc.WriteModelConfig(out, cfg)
+					if err != nil {
+						return errors.Errorf2From(
+							err, "failed to write "+
+								"configuration %v to %v",
+							cfg, out,
+						)
+					}
+				case sqlmodelgen.MetaModelWriter:
+					mm, err = getMetaModel(nil) // parameter is ignored here.
+					if err != nil {
+						return err
+					}
+					err = mc.WriteMetaModel(out, mm)
+					if err != nil {
+						return errors.Errorf2From(
+							err, "failed to write %v to %v",
+							mm, out,
+						)
+					}
+				default:
+					// emit JSON.
+					bs, err := json.Marshal(cfg)
+					if err != nil {
+						return errors.Errorf0From(
+							err, "error serializing configuration into JSON",
+						)
+					}
+					if _, err = io.Copy(out, bytes.NewReader(bs)); err != nil {
+						return errors.Errorf1From(
+							err, "failed to write JSON to %v", out,
+						)
+					}
+				}
+
+			case sqlmodelgen.TemplateContext:
+				if mm, err = getMetaModel(configReader); err != nil {
+					return err
+				}
+				td, err := sqlmodelgen.TemplateDataFromMetaModel(mm, amc.ModelContext)
 				if err != nil {
 					return err
 				}
-				err = mc.WriteMetaModel(out, mm)
-				if err != nil {
-					return errors.Errorf2From(
-						err, "failed to write %v to %v",
-						mm, out,
+				td.Namespace = amc.Args[0]
+				fm := make(template.FuncMap, 8)
+				t := sqlmodelgen.AddFuncs(
+					template.New("<sqlmodelgen>"), fm, amc.ModelContext,
+				).Funcs(fm)
+				if args.TemplateDir == "" {
+					fsys := mc.FS()
+					t, err = t.ParseFS(fsys, "*.txt")
+					if err != nil {
+						return errors.Errorf1From(
+							err, "failed to parse ModelContext file "+
+								"system: %v",
+							fsys,
+						)
+					}
+				} else {
+					t, err = t.ParseFiles(args.TemplateDir, "*.txt")
+					if err != nil {
+						return errors.Errorf1From(
+							err, "failed to parse template directory: %v",
+							args.TemplateDir,
+						)
+					}
+				}
+				if err = t.ExecuteTemplate(out, "0root.txt", td); err != nil {
+					return errors.Errorf1From(
+						err, "error executing template: %v", t,
 					)
 				}
+
+			case sqlmodelgen.MetaModelWriter:
+				if mm, err = getMetaModel(configReader); err != nil {
+					return err
+				}
+				if err = mc.WriteMetaModel(out, mm); err != nil {
+					return errors.Errorf1From(
+						err, "error executing model writer: %[1]v "+
+							"(type: %[1]T)",
+						mc,
+					)
+				}
+
 			default:
-				// emit JSON.
-				bs, err := json.Marshal(cfg)
-				if err != nil {
-					return errors.Errorf0From(
-						err, "error serializing configuration into JSON",
-					)
-				}
-				if _, err = io.Copy(out, bytes.NewReader(bs)); err != nil {
-					return errors.Errorf1From(
-						err, "failed to write JSON to %v", out,
-					)
-				}
-				return nil
-			}
-		case sqlmodelgen.TemplateContext:
-			if mm, err = getMetaModel(configReader); err != nil {
-				return err
-			}
-			td, err := sqlmodelgen.TemplateDataFromMetaModel(mm, amc.ModelContext)
-			if err != nil {
-				return err
-			}
-			td.Namespace = amc.Args[0]
-			fm := make(template.FuncMap, 8)
-			t := sqlmodelgen.AddFuncs(
-				template.New("<sqlmodelgen>"), fm, amc.ModelContext,
-			).Funcs(fm)
-			if args.TemplateDir == "" {
-				fsys := mc.FS()
-				t, err = t.ParseFS(fsys, "*.txt")
-				if err != nil {
-					return errors.Errorf1From(
-						err, "failed to parse ModelContext file "+
-							"system: %v",
-						fsys,
-					)
-				}
-			} else {
-				t, err = t.ParseFiles(args.TemplateDir, "*.txt")
-				if err != nil {
-					return errors.Errorf1From(
-						err, "failed to parse template directory: %v",
-						args.TemplateDir,
-					)
-				}
-			}
-			if err = t.ExecuteTemplate(out, "0root.txt", td); err != nil {
-				return errors.Errorf1From(
-					err, "error executing template: %v", t,
+				return errors.Errorf1(
+					"Unknown model context %[1]v (type: %[1]T)",
+					amc.ModelContext,
 				)
 			}
-
-		case sqlmodelgen.MetaModelWriter:
-			if err = mc.WriteMetaModel(out, mm); err != nil {
+			if err := out.Close(); err != nil {
 				return errors.Errorf1From(
-					err, "error executing model writer: %[1]v "+
-						"(type: %[1]T)",
-					mc,
+					err, "error attempting to close %v", amc.ModelFile,
 				)
 			}
-
-		default:
-			return errors.Errorf1(
-				"Unknown model context %[1]v (type: %[1]T)",
-				amc.ModelContext,
-			)
-		}
-		if err := out.Close(); err != nil {
-			return errors.Errorf1From(
-				err, "error attempting to close %v", amc.ModelFile,
-			)
 		}
 	}
 	return nil
@@ -281,11 +306,13 @@ type nopWriteCloser struct{ io.Writer }
 
 func (n nopWriteCloser) Close() error { return nil }
 
+type ignoreArg struct{}
+
 type templateAction struct{}
 
 var _ argparse.ArgumentAction = templateAction{}
 
-var typeChoices = []argparse.Choice{
+var templateChoices = []argparse.Choice{
 	{
 		Key:   "cs",
 		Value: sqlmodelgen.CSModelContext,
@@ -306,10 +333,10 @@ var typeChoices = []argparse.Choice{
 	// 	Key:   "drawio",
 	// 	Value: sqlmodelgen.DrawIOModelContext,
 	// },
-	// {
-	// 	Key:   "wvace",
-	// 	Value: sqlmodelgen.WVAceModelContext,
-	// },
+	{
+		Key:   "wvace",
+		Value: sqlmodelgen.WVAceModelContext,
+	},
 }
 
 type ArgModelContext struct {
@@ -336,7 +363,7 @@ func (t templateAction) UpdateNamespace(a *argparse.Argument, ns argparse.Namesp
 		s = fmt.Sprint(vs[0])
 	}
 	handledKey := false
-	for _, c := range typeChoices {
+	for _, c := range templateChoices {
 		if c.Key != s {
 			continue
 		}
@@ -352,6 +379,56 @@ func (t templateAction) UpdateNamespace(a *argparse.Argument, ns argparse.Namesp
 			s = fmt.Sprint(vs[1])
 		}
 		amc.Args = []string{s}
+		ns.Append(a, amc)
+		break
+	}
+	if !handledKey {
+		return errors.Errorf1("unknown type choice: %q", s)
+	}
+	return nil
+}
+
+type generatorAction struct{}
+
+var _ argparse.ArgumentAction = generatorAction{}
+
+var generatorChoices = []argparse.Choice{
+	{
+		Key:   "sql-reflect",
+		Value: sqlmodelgen.SQLStreamReflectorModelContext,
+	},
+	{
+		Key:   "drawio",
+		Value: sqlmodelgen.DrawIOModelContext,
+	},
+}
+
+func (g generatorAction) Name() string { return "Generator action" }
+func (g generatorAction) UpdateNamespace(a *argparse.Argument, ns argparse.Namespace, vs []interface{}) error {
+	const expectNargs = 2
+	if len(vs) != expectNargs {
+		return errors.Errorf3(
+			"%v expected %d arguments, not %d",
+			g.Name(), expectNargs, len(vs),
+		)
+	}
+	s, ok := vs[0].(string)
+	if !ok {
+		s = fmt.Sprint(vs[0])
+	}
+	handledKey := false
+	for _, c := range generatorChoices {
+		if c.Key != s {
+			continue
+		}
+		handledKey = true
+		amc := ArgModelContext{
+			ModelContext: c.Value.(sqlmodelgen.ModelContext),
+		}
+		if s, ok = vs[1].(string); !ok {
+			s = fmt.Sprint(vs[1])
+		}
+		amc.ModelFile = s
 		ns.Append(a, amc)
 		break
 	}
