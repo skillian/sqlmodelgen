@@ -1,305 +1,256 @@
 {
-	"namespace": "sqlstream",
 	"databases": [
 		{
+			"namers": {
+				"table": {
+					"sqlNamer": "SnakeCaseUpper"
+				},
+				"column": {
+					"sqlNamer": "SnakeCaseUpper"
+				}
+			},
 			"rawName": "",
 			"schemas": [
 				{
-					"rawName": "InformationSchema",
-					"sqlName": "INFORMATION_SCHEMA",
+					"rawName": "information schema",
 					"tables": [
 						{
-							"rawName": "InfoSchema",
-							"sqlName": "SCHEMATA",
+							"rawName": "info schema",
 							"columns": [
 								{
-									"rawName": "CatalogName",
-									"sqlName": "CATALOG_NAME",
+									"rawName": "catalog name",
 									"type": "nullable(string(var: true, length: 128))"
 								},
 								{
-									"rawName": "SchemaName",
-									"sqlName": "SCHEMA_NAME",
+									"rawName": "schema name",
 									"type": "string(var: true, length: 128)"
 								},
 								{
-									"rawName": "SchemaOwner",
-									"sqlName": "SCHEMA_OWNER",
+									"rawName": "schema owner",
 									"type": "nullable(string(var: true, length: 128))"
 								}
 							]
 						},
 						{
-							"rawName": "InfoTable",
+							"rawName": "info table",
 							"sqlName": "TABLES",
 							"columns": [
 								{
-									"rawName": "TableCatalog",
-									"sqlName": "TABLE_CATALOG",
+									"rawName": "table catalog",
 									"type": "nullable(string(var: true, length: 128))"
 								},
 								{
-									"rawName": "TableSchema",
-									"sqlName": "TABLE_SCHEMA",
+									"rawName": "table schema",
 									"type": "nullable(string(var: true, length: 128))"
 								},
 								{
-									"rawName": "TableName",
-									"sqlName": "TABLE_NAME",
+									"rawName": "table name",
 									"type": "string(var: true, length: 128)"
 								},
 								{
-									"rawName": "TableType",
-									"sqlName": "TABLE_TYPE",
+									"rawName": "table type",
 									"type": "nullable(string(var: true, length: 10))"
 								}
 							]
 						},
 						{
-							"rawName": "InfoView",
+							"rawName": "info view",
 							"sqlName": "VIEWS",
 							"columns": [
 								{
-									"rawName": "TableCatalog",
-									"sqlName": "TABLE_CATALOG",
+									"rawName": "table catalog",
 									"type": "nullable(string(var: true, length: 128))"
 								},
 								{
-									"rawName": "TableSchema",
-									"sqlName": "TABLE_SCHEMA",
+									"rawName": "table schema",
 									"type": "nullable(string(var: true, length: 128))"
 								},
 								{
-									"rawName": "TableName",
-									"sqlName": "TABLE_NAME",
+									"rawName": "table name",
 									"type": "string(var: true, length: 128)"
 								},
 								{
-									"rawName": "ViewDefinition",
-									"sqlName": "VIEW_DEFINITION",
+									"rawName": "view definition",
 									"type": "nullable(string(var: true, length: 4000))"
 								},
 								{
-									"rawName": "CheckOption",
-									"sqlName": "CHECK_OPTION",
+									"rawName": "check option",
 									"type": "nullable(string(var: true, length: 7))"
 								},
 								{
-									"rawName": "IsUpdatable",
-									"sqlName": "IS_UPDATABLE",
+									"rawName": "is updatable",
 									"type": "string(var: true, length: 2)"
 								}
 							]
 						},
 						{
-							"rawName": "InfoColumn",
+							"rawName": "info column",
 							"sqlName": "COLUMNS",
 							"columns": [
 								{
-									"rawName": "TableCatalog",
-									"sqlName": "TABLE_CATALOG",
+									"rawName": "table catalog",
 									"type": "nullable(string(var: true, length: 128))"
 								},
 								{
-									"rawName": "TableSchema",
-									"sqlName": "TABLE_SCHEMA",
+									"rawName": "table schema",
 									"type": "nullable(string(var: true, length: 128))"
 								},
 								{
-									"rawName": "TableName",
-									"sqlName": "TABLE_NAME",
+									"rawName": "table name",
 									"type": "string(var: true, length: 128)"
 								},
 								{
-									"rawName": "ColumnName",
-									"sqlName": "COLUMN_NAME",
+									"rawName": "column name",
 									"type": "nullable(string(var: true, length: 128))"
 								},
 								{
-									"rawName": "OrdinalPosition",
-									"sqlName": "ORDINAL_POSITION",
+									"rawName": "ordinal position",
 									"type": "int(32)"
 								},
 								{
-									"rawName": "ColumnDefault",
-									"sqlName": "COLUMN_DEFAULT",
+									"rawName": "column default",
 									"type": "nullable(string(var: true, length: 4000))"
 								},
 								{
-									"rawName": "IsNullable",
-									"sqlName": "IS_NULLABLE",
+									"rawName": "is nullable",
 									"type": "nullable(string(var: true, length: 3))"
 								},
 								{
-									"rawName": "DataType",
-									"sqlName": "DATA_TYPE",
+									"rawName": "data type",
 									"type": "nullable(string(var: true, length: 128))"
 								},
 								{
-									"rawName": "CharacterMaximumLength",
-									"sqlName": "CHARACTER_MAXIMUM_LENGTH",
+									"rawName": "character maximum length",
 									"type": "nullable(int(32))"
 								},
 								{
-									"rawName": "CharacterOctetLength",
-									"sqlName": "CHARACTER_OCTET_LENGTH",
+									"rawName": "character octet length",
 									"type": "nullable(int(32))"
 								},
 								{
-									"rawName": "NumericPrecision",
-									"sqlName": "NUMERIC_PRECISION",
+									"rawName": "numeric precision",
 									"type": "nullable(int(8))"
 								},
 								{
-									"rawName": "NumericPrecisionRadix",
-									"sqlName": "NUMERIC_PRECISION_RADIX",
+									"rawName": "numeric precision radix",
 									"type": "nullable(int(16))"
 								},
 								{
-									"rawName": "NumericScale",
-									"sqlName": "NUMERIC_SCALE",
+									"rawName": "numeric scale",
 									"type": "nullable(int(32))"
 								},
 								{
-									"rawName": "DatetimePrecision",
-									"sqlName": "DATETIME_PRECISION",
+									"rawName": "datetime precision",
 									"type": "nullable(int(16))"
 								},
 								{
-									"rawName": "CharacterSetCatalog",
-									"sqlName": "CHARACTER_SET_CATALOG",
+									"rawName": "character set catalog",
 									"type": "nullable(string(var: true, length: 128))"
 								},
 								{
-									"rawName": "CharacterSetSchema",
-									"sqlName": "CHARACTER_SET_SCHEMA",
+									"rawName": "character set schema",
 									"type": "nullable(string(var: true, length: 128))"
 								},
 								{
-									"rawName": "CharacterSetName",
-									"sqlName": "CHARACTER_SET_NAME",
+									"rawName": "character set name",
 									"type": "nullable(string(var: true, length: 128))"
 								},
 								{
-									"rawName": "CollationCatalog",
-									"sqlName": "COLLATION_CATALOG",
+									"rawName": "collation catalog",
 									"type": "nullable(string(var: true, length: 128))"
 								},
 								{
-									"rawName": "CollationSchema",
-									"sqlName": "COLLATION_SCHEMA",
+									"rawName": "collation schema",
 									"type": "nullable(string(var: true, length: 128))"
 								},
 								{
-									"rawName": "CollationName",
-									"sqlName": "COLLATION_NAME",
+									"rawName": "collation name",
 									"type": "nullable(string(var: true, length: 128))"
 								},
 								{
-									"rawName": "DomainCatalog",
-									"sqlName": "DOMAIN_CATALOG",
+									"rawName": "domain catalog",
 									"type": "nullable(string(var: true, length: 128))"
 								},
 								{
-									"rawName": "DomainSchema",
-									"sqlName": "DOMAIN_SCHEMA",
+									"rawName": "domain schema",
 									"type": "nullable(string(var: true, length: 128))"
 								},
 								{
-									"rawName": "DomainName",
-									"sqlName": "DOMAIN_NAME",
+									"rawName": "domain name",
 									"type": "nullable(string(var: true, length: 128))"
 								}
 							]
 						},
 						{
-							"sqlName": "CONSTRAINT_COLUMN_USAGE",
-							"rawName": "ConstraintColumnUsage",
+							"rawName": "constraint column usage",
 							"columns": [
 								{
-									"sqlName": "TABLE_CATALOG",
-									"rawName": "TableCatalog",
+									"rawName": "table catalog",
 									"type":"nullable(string(var: true, length: 128))"
 								},
 								{
-									"sqlName": "TABLE_SCHEMA",
-									"rawName": "TableSchema",
+									"rawName": "table schema",
 									"type":"nullable(string(var: true, length: 128))"
 								},
 								{
-									"sqlName": "TABLE_NAME",
-									"rawName": "TableName",
+									"rawName": "table name",
 									"type":"string(var: true, length: 128)"
 								},
 								{
-									"sqlName": "COLUMN_NAME",
-									"rawName": "ColumnName",
+									"rawName": "column name",
 									"type":"nullable(string(var: true, length: 128))"
 								},
 								{
-									"sqlName": "CONSTRAINT_CATALOG",
-									"rawName": "ConstraintCatalog",
+									"rawName": "constraint catalog",
 									"type":"nullable(string(var: true, length: 128))"
 								},
 								{
-									"sqlName": "CONSTRAINT_SCHEMA",
-									"rawName": "ConstraintSchema",
+									"rawName": "constraint schema",
 									"type":"nullable(string(var: true, length: 128))"
 								},
 								{
-									"sqlName": "CONSTRAINT_NAME",
-									"rawName": "ConstraintName",
+									"rawName": "constraint name",
 									"type":"string(var: true, length: 128)"
 								}
 							]
 						},
 						{
-							"sqlName": "REFERENTIAL_CONSTRAINTS",
-							"rawName": "ReferentialConstraint",
+							"rawName": "referential constraint",
 							"columns": [
 								{
-									"sqlName": "CONSTRAINT_CATALOG",
-									"rawName": "ConstraintCatalog",
+									"rawName": "constraint catalog",
 									"type":"nullable(string(var: true, length: 128))"
 								},
 								{
-									"sqlName": "CONSTRAINT_SCHEMA",
-									"rawName": "ConstraintSchema",
+									"rawName": "constraint schema",
 									"type":"nullable(string(var: true, length: 128))"
 								},
 								{
-									"sqlName": "CONSTRAINT_NAME",
-									"rawName": "ConstraintName",
+									"rawName": "constraint name",
 									"type":"string(var: true, length: 128)"
 								},
 								{
-									"sqlName": "UNIQUE_CONSTRAINT_CATALOG",
-									"rawName": "UniqueConstraintCatalog",
+									"rawName": "unique constraint catalog",
 									"type":"nullable(string(var: true, length: 128))"
 								},
 								{
-									"sqlName": "UNIQUE_CONSTRAINT_SCHEMA",
-									"rawName": "UniqueConstraintSchema",
+									"rawName": "unique constraint schema",
 									"type":"nullable(string(var: true, length: 128))"
 								},
 								{
-									"sqlName": "UNIQUE_CONSTRAINT_NAME",
-									"rawName": "UniqueConstraintName",
+									"rawName": "unique constraint name",
 									"type":"string(var: true, length: 128)"
 								},
 								{
-									"sqlName": "MATCH_OPTION",
-									"rawName": "MatchOption",
+									"rawName": "match option",
 									"type":"nullable(string(var: true, length: 7))"
 								},
 								{
-									"sqlName": "UPDATE_RULE",
-									"rawName": "UpdateRule",
+									"rawName": "update rule",
 									"type":"nullable(string(var: true, length: 11))"
 								},
 								{
-									"sqlName": "DELETE_RULE",
-									"rawName": "DeleteRule",
+									"rawName": "delete rule",
 									"type":"nullable(string(var: true, length: 11))"
 								}
 							]
