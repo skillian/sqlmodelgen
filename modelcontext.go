@@ -28,6 +28,8 @@ type TemplateContext interface {
 	FS() fs.FS
 }
 
+// TemplateFuncsAdder adds functions to the template FuncMap before
+// executing the templates defined in the TemplateContext's FS.
 type TemplateFuncsAdder interface {
 	AddFuncs(m template.FuncMap)
 }
@@ -108,7 +110,11 @@ type MetaModelWriter interface {
 	WriteMetaModel(w io.Writer, c *sqlstream.MetaModel) error
 }
 
-// ModelConfigWriter is like ModelWriter but can write the "unlinked"
+type TemplateDataWriter interface {
+	WriteTemplateData(w io.Writer, td TemplateData) error
+}
+
+// ModelConfigWriter is like MetaModelWriter but can write the "unlinked"
 // config.Config instead of requiring the fully parsed and linked
 // sqlstream.Config.
 type ModelConfigWriter interface {

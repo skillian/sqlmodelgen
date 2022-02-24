@@ -3,6 +3,7 @@ package sqlmodelgen
 import (
 	"io"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/skillian/expr/errors"
@@ -47,8 +48,13 @@ func (wvAceModelContext) WriteMetaModel(w io.Writer, c *sqlstream.MetaModel) (er
 			s.Filters = "All " + wvClassName
 			s.Views = wvClassName
 			s.Sections = wvClassName
-			for i, col := range tbl.Columns {
-				s.DisplayName = col.ModelName
+			i := -1
+			for _, col := range tbl.Columns {
+				if strings.EqualFold(col.ModelName, "objectid") {
+					continue
+				}
+				i++
+				s.DisplayName = col.RawName
 				s.DataType, s.LengthPrecision, err = wvAceType(col.Type)
 				if err != nil {
 					return errors.Errorf1From(
@@ -72,8 +78,14 @@ func (wvAceModelContext) WriteMetaModel(w io.Writer, c *sqlstream.MetaModel) (er
 					}
 					s.RelatedClass = wvAceClassName(fkCol.Table)
 					s.DataType = "Relation"
+					if strings.HasSuffix(s.DisplayName, "ID") ||
+						strings.HasSuffix(s.DisplayName, "Id") {
+						s.DisplayName = strings.TrimSpace(
+							s.DisplayName[:len(s.DisplayName)-len("ID")],
+						)
+					}
 				}
-				// TODO: Column documentation
+				s.Description = col.Doc
 				// TODO: Column datasets?
 				// TODO: Column default values?
 				s.PrimaryAttribute = col.PK

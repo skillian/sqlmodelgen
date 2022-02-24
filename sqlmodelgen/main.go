@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"text/template"
 
 	"github.com/davecgh/go-spew/spew"
@@ -17,6 +18,11 @@ import (
 	"github.com/skillian/expr/stream/sqlstream"
 	"github.com/skillian/logging"
 	"github.com/skillian/sqlmodelgen"
+)
+
+const (
+	namespaceParam   = "namespace"
+	templateDirParam = "templatedir"
 )
 
 var (
@@ -35,7 +41,7 @@ type Args struct {
 	ConfigFile             string
 	GeneratorModelContexts []ArgModelContext
 	TemplateModelContexts  []ArgModelContext
-	TemplateDir            string
+	valueDefs              []valueDef
 }
 
 func main() {
@@ -73,6 +79,18 @@ func main() {
 		),
 	).MustBind(&args.LogLevel)
 	parser.MustAddArgument(
+		argparse.OptionStrings("-p", "--param", "--parameter"),
+		argparse.ActionFunc(valueAction{}),
+		argparse.Nargs(3),
+		argparse.MetaVar("TARGET_INDEX", "NAME", "VALUE"),
+		argparse.Help(
+			"Specify a parameter to a model target.  "+
+				"TARGET_INDEX is the index of the "+
+				"target to which the parameter "+
+				"should apply.",
+		),
+	).MustBind(&args.valueDefs)
+	parser.MustAddArgument(
 		argparse.OptionStrings("-g", "--generator"),
 		argparse.MetaVar("TYPE", "OUTPUT_FILE"),
 		argparse.ActionFunc(generatorAction{}),
@@ -87,10 +105,10 @@ func main() {
 		),
 	).MustBind(&args.GeneratorModelContexts)
 	parser.MustAddArgument(
-		argparse.OptionStrings("-t", "--template"),
-		argparse.MetaVar("TYPE", "NAMESPACE", "OUTPUT_FILE"),
+		argparse.OptionStrings("-t", "--target"),
+		argparse.MetaVar("TYPE", "OUTPUT_FILE"),
 		argparse.ActionFunc(templateAction{}),
-		argparse.Nargs(3),
+		argparse.Nargs(2),
 		argparse.Help(
 			"Generate templated output from the model.  "+
 				"Supported options are:\n"+
@@ -101,18 +119,6 @@ func main() {
 				"file\n",
 		),
 	).MustBind(&args.TemplateModelContexts)
-
-	// TODO: Handle GeneratorModelContexts AND/OR TemplateModelContexts.
-
-	parser.MustAddArgument(
-		argparse.OptionStrings("-T", "--template-dir"),
-		argparse.Action("store"),
-		argparse.Default(""),
-		argparse.Help(
-			"Optional custom template directory to override the "+
-				"integrated templates",
-		),
-	).MustBind(&args.TemplateDir)
 	parser.MustAddArgument(
 		argparse.Dest("configfile"),
 		argparse.Action("store"),
@@ -122,15 +128,34 @@ func main() {
 				"which expects a connection configuration file",
 		),
 	).MustBind(&args.ConfigFile)
+	// logger.SetLevel(logging.VerboseLevel)
 	parser.MustParseArgs()
-
+	// logger.Verbose(
+	// 	"LogLevel: %p\n"+
+	// 		"ConfigFile: %p\n"+
+	// 		"GeneratorModelContexts: %p\n"+
+	// 		"TemplateModelContexts: %p\n"+
+	// 		"valueDefs: %p",
+	// 	&args.LogLevel,
+	// 	&args.ConfigFile,
+	// 	&args.GeneratorModelContexts,
+	// 	&args.TemplateModelContexts,
+	// 	&args.valueDefs,
+	// )
+	defs := make([]ArgModelContext,
+		len(args.GeneratorModelContexts),
+		len(args.GeneratorModelContexts)+len(args.TemplateModelContexts))
+	copy(defs, args.GeneratorModelContexts)
+	defs = append(defs, args.TemplateModelContexts...)
+	for _, vd := range args.valueDefs {
+		defs[vd.target].Args[vd.name] = vd.value
+	}
 	if err := Main(args); err != nil {
 		panic(errors.WithoutParentStackTrace(err))
 	}
 }
 
 func Main(args Args) (Err error) {
-	logger.SetLevel(args.LogLevel)
 	configReader, err := os.Open(args.ConfigFile)
 	if err != nil {
 		return errors.Errorf1From(
@@ -162,7 +187,7 @@ func Main(args Args) (Err error) {
 		for _, amc := range amcs {
 			var out io.WriteCloser
 			var err error
-			if amc.ModelFile == "" {
+			if amc.ModelFile == "" || amc.ModelFile == "-" {
 				out = nopWriteCloser{os.Stdout}
 			} else {
 				out, err = os.Create(amc.ModelFile)
@@ -244,12 +269,27 @@ func Main(args Args) (Err error) {
 				if err != nil {
 					return err
 				}
-				td.Namespace = amc.Args[0]
+				var ok bool
+				if td.Namespace, ok = amc.Args[namespaceParam]; !ok {
+					return errors.Errorf1(
+						"failed to get namespace for template. "+
+							"Please use the %q parameter",
+						namespaceParam,
+					)
+				}
 				fm := make(template.FuncMap, 8)
 				t := sqlmodelgen.AddFuncs(
 					template.New("<sqlmodelgen>"), fm, amc.ModelContext,
 				).Funcs(fm)
-				if args.TemplateDir == "" {
+				if td, ok := amc.Args[templateDirParam]; ok {
+					t, err = t.ParseFiles(td, "*.txt")
+					if err != nil {
+						return errors.Errorf1From(
+							err, "failed to parse template directory: %v",
+							td,
+						)
+					}
+				} else {
 					fsys := mc.FS()
 					t, err = t.ParseFS(fsys, "*.txt")
 					if err != nil {
@@ -257,14 +297,6 @@ func Main(args Args) (Err error) {
 							err, "failed to parse ModelContext file "+
 								"system: %v",
 							fsys,
-						)
-					}
-				} else {
-					t, err = t.ParseFiles(args.TemplateDir, "*.txt")
-					if err != nil {
-						return errors.Errorf1From(
-							err, "failed to parse template directory: %v",
-							args.TemplateDir,
 						)
 					}
 				}
@@ -282,6 +314,23 @@ func Main(args Args) (Err error) {
 					return errors.Errorf1From(
 						err, "error executing model writer: %[1]v "+
 							"(type: %[1]T)",
+						mc,
+					)
+				}
+
+			case sqlmodelgen.TemplateDataWriter:
+				if mm, err = getMetaModel(configReader); err != nil {
+					return err
+				}
+				td, err := sqlmodelgen.TemplateDataFromMetaModel(mm, amc.ModelContext)
+				if err != nil {
+					return err
+				}
+				td.Namespace = amc.Args[namespaceParam]
+				if err = mc.WriteTemplateData(out, td); err != nil {
+					return errors.Errorf1From(
+						err, "error executing template data "+
+							"writer: %[1]v (type: %[1]T)",
 						mc,
 					)
 				}
@@ -306,8 +355,6 @@ type nopWriteCloser struct{ io.Writer }
 
 func (n nopWriteCloser) Close() error { return nil }
 
-type ignoreArg struct{}
-
 type templateAction struct{}
 
 var _ argparse.ArgumentAction = templateAction{}
@@ -325,17 +372,13 @@ var templateChoices = []argparse.Choice{
 		Key:   "go-models",
 		Value: sqlmodelgen.GoModelsModelContext,
 	},
-	// {
-	// 	Key:   "sql-reflect",
-	// 	Value: sqlmodelgen.SQLStreamReflectorModelContext,
-	// },
-	// {
-	// 	Key:   "drawio",
-	// 	Value: sqlmodelgen.DrawIOModelContext,
-	// },
 	{
 		Key:   "wvace",
 		Value: sqlmodelgen.WVAceModelContext,
+	},
+	{
+		Key:   "puwvjson",
+		Value: sqlmodelgen.PUWVJSONModelContext,
 	},
 }
 
@@ -343,15 +386,14 @@ type ArgModelContext struct {
 	ModelContext sqlmodelgen.ModelContext
 	ModelFile    string
 
-	// Args holds additional arguments to the ModelContext argument.
-	// For example, for templates it contains the namespace to use in the
-	// template.
-	Args []string
+	// Args holds optional additional arguments to the model
+	// context.
+	Args map[string]string
 }
 
 func (t templateAction) Name() string { return "Template action" }
 func (t templateAction) UpdateNamespace(a *argparse.Argument, ns argparse.Namespace, vs []interface{}) error {
-	const expectNargs = 3
+	const expectNargs = 2
 	if len(vs) != expectNargs {
 		return errors.Errorf3(
 			"%v expected %d arguments, not %d",
@@ -375,10 +417,7 @@ func (t templateAction) UpdateNamespace(a *argparse.Argument, ns argparse.Namesp
 			s = fmt.Sprint(vs[1])
 		}
 		amc.ModelFile = s
-		if s, ok = vs[2].(string); !ok {
-			s = fmt.Sprint(vs[1])
-		}
-		amc.Args = []string{s}
+		amc.Args = make(map[string]string)
 		ns.Append(a, amc)
 		break
 	}
@@ -435,5 +474,61 @@ func (g generatorAction) UpdateNamespace(a *argparse.Argument, ns argparse.Names
 	if !handledKey {
 		return errors.Errorf1("unknown type choice: %q", s)
 	}
+	return nil
+}
+
+type valueAction struct{}
+
+var _ argparse.ArgumentAction = valueAction{}
+
+type valueDef struct {
+	target int
+	name   string
+	value  string
+}
+
+func (valueAction) Name() string { return "value" }
+func (valueAction) UpdateNamespace(a *argparse.Argument, ns argparse.Namespace, vs []interface{}) error {
+	const expectNargs = 3
+	if len(vs) != expectNargs {
+		return errors.Errorf3(
+			"%v expected %d arguments, but got %d",
+			valueAction{}.Name(), expectNargs, len(vs),
+		)
+	}
+	vd := valueDef{}
+	switch v := vs[0].(type) {
+	case int:
+		vd.target = v
+	case string:
+		i, err := strconv.Atoi(v)
+		if err != nil {
+			return errors.Errorf1From(
+				err, "cannot parse %q as an integer",
+				v,
+			)
+		}
+		vd.target = i
+	default:
+		s := fmt.Sprint(v)
+		i, err := strconv.Atoi(s)
+		if err != nil {
+			return errors.Errorf1From(
+				err, "cannot parse %q as an integer",
+				v,
+			)
+		}
+		vd.target = i
+	}
+	var ok bool
+	vd.name, ok = vs[1].(string)
+	if !ok {
+		vd.name = fmt.Sprint(vs[1])
+	}
+	vd.value, ok = vs[2].(string)
+	if !ok {
+		vd.name = fmt.Sprint(vs[2])
+	}
+	ns.Append(a, vd)
 	return nil
 }
