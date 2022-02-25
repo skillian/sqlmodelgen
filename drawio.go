@@ -214,13 +214,14 @@ type DrawIOArrowERType int
 
 const (
 	DrawIOBadArrowERType DrawIOArrowERType = iota
-	//DrawIOZeroToOne
+	DrawIOZeroToOne
 	DrawIOZeroToMany
 	DrawIOOneToMany
 	DrawIOMandOne
 )
 
 var drawIOArrowERTypes = map[string]DrawIOArrowERType{
+	"ERzeroToOne":  DrawIOZeroToOne,
 	"ERzeroToMany": DrawIOZeroToMany,
 	"ERoneToMany":  DrawIOOneToMany,
 	"ERmandOne":    DrawIOMandOne,

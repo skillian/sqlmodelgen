@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/skillian/expr/errors"
 	"github.com/skillian/expr/stream/sqlstream"
@@ -45,9 +46,9 @@ func (wvAceModelContext) WriteMetaModel(w io.Writer, c *sqlstream.MetaModel) (er
 		for _, tbl := range sch.Tables {
 			wvClassName := wvAceClassName(tbl)
 			createWVAceClassSheet(f, wvClassName)
-			s.Filters = "All " + wvClassName
-			s.Views = wvClassName
-			s.Sections = wvClassName
+			s.Filters = "All " + englishPluralize(tbl.RawName)
+			s.Views = tbl.RawName
+			s.Sections = tbl.RawName
 			i := -1
 			for _, col := range tbl.Columns {
 				if strings.EqualFold(col.ModelName, "objectid") {
@@ -181,7 +182,27 @@ func wvAceType(t sqltypes.Type) (dataType string, lengthPrecision int, err error
 }
 
 func wvAceClassName(tbl *sqlstream.Table) string {
-	return tbl.Schema.ModelName + tbl.ModelName
+	prefix := tbl.Schema.ModelName
+	if prefix == "" {
+		donefirst := false
+		space := false
+		prefix = strings.Map(func(r rune) rune {
+			if !donefirst {
+				donefirst = true
+				return unicode.ToUpper(r)
+			}
+			if unicode.IsSpace(r) {
+				space = true
+				return -1
+			}
+			if space {
+				space = false
+				return unicode.ToLower(r)
+			}
+			return -1
+		}, tbl.Schema.Database.RawName)
+	}
+	return prefix + tbl.ModelName
 }
 
 type wvAceClassSheet struct {
