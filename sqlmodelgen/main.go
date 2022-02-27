@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"strconv"
+	"strings"
 	"text/template"
 
 	"github.com/davecgh/go-spew/spew"
@@ -34,6 +35,52 @@ var (
 			logging.HandlerLevel(logging.VerboseLevel),
 		),
 	)
+
+	generatorChoices = []argModelContextChoice{
+		{
+			Key:   "sql-reflect",
+			Value: sqlmodelgen.SQLStreamReflectorModelContext,
+			Help:  "existing database",
+		},
+		{
+			Key:   "drawio",
+			Value: sqlmodelgen.DrawIOModelContext,
+			Help:  "Draw.io / Diagrams.net ERD",
+		},
+	}
+
+	templateChoices = []argModelContextChoice{
+		{
+			Key:   "cs",
+			Value: sqlmodelgen.CSModelContext,
+			Help:  "C# SQL models",
+		},
+		{
+			Key:   "go-sql",
+			Value: sqlmodelgen.GoSQLModelContext,
+			Help:  "Go SQL database models",
+		},
+		{
+			Key:   "go-models",
+			Value: sqlmodelgen.GoModelsModelContext,
+			Help:  "Go domain models",
+		},
+		{
+			Key:   "puwvjson",
+			Value: sqlmodelgen.PUWVJSONModelContext,
+			Help:  "Paperless.Unity WorkView JSON",
+		},
+		{
+			Key:   "sqlddl-mssql",
+			Value: sqlmodelgen.MSSQLDDLModelContext,
+			Help:  "SQL DDL for Microsoft SQL Server",
+		},
+		{
+			Key:   "wvace",
+			Value: sqlmodelgen.WVAceModelContext,
+			Help:  "Hyland WorkView ACE file",
+		},
+	}
 )
 
 type Args struct {
@@ -90,34 +137,40 @@ func main() {
 				"should apply.",
 		),
 	).MustBind(&args.valueDefs)
+	helpb := strings.Builder{}
+	helpb.WriteString(
+		"Generate a JSON model file which can be used as input to " +
+			"a target.  The allowed choices are:",
+	)
+	for _, gen := range generatorChoices {
+		helpb.WriteByte('\n')
+		helpb.WriteString(gen.Key)
+		helpb.WriteString(":\t")
+		helpb.WriteString(gen.Help)
+	}
 	parser.MustAddArgument(
 		argparse.OptionStrings("-g", "--generator"),
 		argparse.MetaVar("TYPE", "OUTPUT_FILE"),
 		argparse.ActionFunc(generatorAction{}),
 		argparse.Nargs(2),
-		argparse.Help(
-			"Generate a JSON model which can be consumed by a "+
-				"template generator.  Supported options are:\n"+
-				"\tsql-reflector:  Generate a model from a "+
-				"SQL database\n"+
-				"\tdrawio:         Use a draw.io/"+
-				"diagrams.net ERD diagram",
-		),
+		argparse.Help(helpb.String()),
 	).MustBind(&args.GeneratorModelContexts)
+	helpb.Reset()
+	helpb.WriteString(
+		"Generate some target output from a model JSON file.",
+	)
+	for _, tmp := range templateChoices {
+		helpb.WriteByte('\n')
+		helpb.WriteString(tmp.Key)
+		helpb.WriteString(":\t")
+		helpb.WriteString(tmp.Help)
+	}
 	parser.MustAddArgument(
 		argparse.OptionStrings("-t", "--target"),
 		argparse.MetaVar("TYPE", "OUTPUT_FILE"),
 		argparse.ActionFunc(templateAction{}),
 		argparse.Nargs(2),
-		argparse.Help(
-			"Generate templated output from the model.  "+
-				"Supported options are:\n"+
-				"\tgo-sql:     Go SQL models\n"+
-				"\tgo-models:  Go data models\n"+
-				"\tcs:         C# SQL models\n"+
-				"\twvace:      Hyland OnBase WorkView ACE "+
-				"file\n",
-		),
+		argparse.Help(helpb.String()),
 	).MustBind(&args.TemplateModelContexts)
 	parser.MustAddArgument(
 		argparse.Dest("configfile"),
@@ -269,6 +322,13 @@ func Main(args Args) (Err error) {
 				if err != nil {
 					return err
 				}
+				for k, v := range amc.Args {
+					if k == namespaceParam {
+						td.Namespace = v
+						continue
+					}
+					td.Parameters[k] = v
+				}
 				var ok bool
 				if td.Namespace, ok = amc.Args[namespaceParam]; !ok {
 					return errors.Errorf1(
@@ -359,29 +419,6 @@ type templateAction struct{}
 
 var _ argparse.ArgumentAction = templateAction{}
 
-var templateChoices = []argparse.Choice{
-	{
-		Key:   "cs",
-		Value: sqlmodelgen.CSModelContext,
-	},
-	{
-		Key:   "go-sql",
-		Value: sqlmodelgen.GoSQLModelContext,
-	},
-	{
-		Key:   "go-models",
-		Value: sqlmodelgen.GoModelsModelContext,
-	},
-	{
-		Key:   "wvace",
-		Value: sqlmodelgen.WVAceModelContext,
-	},
-	{
-		Key:   "puwvjson",
-		Value: sqlmodelgen.PUWVJSONModelContext,
-	},
-}
-
 type ArgModelContext struct {
 	ModelContext sqlmodelgen.ModelContext
 	ModelFile    string
@@ -427,20 +464,15 @@ func (t templateAction) UpdateNamespace(a *argparse.Argument, ns argparse.Namesp
 	return nil
 }
 
+type argModelContextChoice struct {
+	Key   string
+	Value sqlmodelgen.ModelContext
+	Help  string
+}
+
 type generatorAction struct{}
 
 var _ argparse.ArgumentAction = generatorAction{}
-
-var generatorChoices = []argparse.Choice{
-	{
-		Key:   "sql-reflect",
-		Value: sqlmodelgen.SQLStreamReflectorModelContext,
-	},
-	{
-		Key:   "drawio",
-		Value: sqlmodelgen.DrawIOModelContext,
-	},
-}
 
 func (g generatorAction) Name() string { return "Generator action" }
 func (g generatorAction) UpdateNamespace(a *argparse.Argument, ns argparse.Namespace, vs []interface{}) error {

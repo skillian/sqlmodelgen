@@ -1,0 +1,359 @@
+{
+	"Namespace": "MyNamespace",
+	"Applications": [
+		{
+			"Name": "",
+			"Namespace": "",
+			"Classes": [
+				{
+					"Name": "InfoSchema",
+					"ID": 824637521920,
+					"Attributes": [
+						{
+							"Name": "CatalogName",
+							"ID": 824637915136,
+							"ClassID": 824637521920,
+							"Type": "Text"
+						},
+						{
+							"Name": "SchemaName",
+							"ID": 824638046208,
+							"ClassID": 824637521920,
+							"Type": "Text"
+						},
+						{
+							"Name": "SchemaOwner",
+							"ID": 824638177280,
+							"ClassID": 824637521920,
+							"Type": "Text"
+						}
+					]
+				},
+				{
+					"Name": "InfoTable",
+					"ID": 824637540352,
+					"Attributes": [
+						{
+							"Name": "TableCatalog",
+							"ID": 824638308352,
+							"ClassID": 824637540352,
+							"Type": "Text"
+						},
+						{
+							"Name": "TableSchema",
+							"ID": 824638439424,
+							"ClassID": 824637540352,
+							"Type": "Text"
+						},
+						{
+							"Name": "TableName",
+							"ID": 824638570496,
+							"ClassID": 824637540352,
+							"Type": "Text"
+						},
+						{
+							"Name": "TableType",
+							"ID": 824638701568,
+							"ClassID": 824637540352,
+							"Type": "Text"
+						}
+					]
+				},
+				{
+					"Name": "InfoView",
+					"ID": 824637558784,
+					"Attributes": [
+						{
+							"Name": "TableCatalog",
+							"ID": 824638832640,
+							"ClassID": 824637558784,
+							"Type": "Text"
+						},
+						{
+							"Name": "TableSchema",
+							"ID": 824641060864,
+							"ClassID": 824637558784,
+							"Type": "Text"
+						},
+						{
+							"Name": "TableName",
+							"ID": 824641191936,
+							"ClassID": 824637558784,
+							"Type": "Text"
+						},
+						{
+							"Name": "ViewDefinition",
+							"ID": 824641585152,
+							"ClassID": 824637558784,
+							"Type": "Text"
+						},
+						{
+							"Name": "CheckOption",
+							"ID": 824641716224,
+							"ClassID": 824637558784,
+							"Type": "Text"
+						},
+						{
+							"Name": "IsUpdatable",
+							"ID": 824641847296,
+							"ClassID": 824637558784,
+							"Type": "Text"
+						}
+					]
+				},
+				{
+					"Name": "InfoColumn",
+					"ID": 824639143936,
+					"Attributes": [
+						{
+							"Name": "TableCatalog",
+							"ID": 824641978368,
+							"ClassID": 824639143936,
+							"Type": "Text"
+						},
+						{
+							"Name": "TableSchema",
+							"ID": 824642109440,
+							"ClassID": 824639143936,
+							"Type": "Text"
+						},
+						{
+							"Name": "TableName",
+							"ID": 824642240512,
+							"ClassID": 824639143936,
+							"Type": "Text"
+						},
+						{
+							"Name": "ColumnName",
+							"ID": 824642371584,
+							"ClassID": 824639143936,
+							"Type": "Text"
+						},
+						{
+							"Name": "OrdinalPosition",
+							"ID": 824642502656,
+							"ClassID": 824639143936,
+							"Type": "Integer"
+						},
+						{
+							"Name": "ColumnDefault",
+							"ID": 824642633728,
+							"ClassID": 824639143936,
+							"Type": "Text"
+						},
+						{
+							"Name": "IsNullable",
+							"ID": 824642764800,
+							"ClassID": 824639143936,
+							"Type": "Text"
+						},
+						{
+							"Name": "DataType",
+							"ID": 824642895872,
+							"ClassID": 824639143936,
+							"Type": "Text"
+						},
+						{
+							"Name": "CharacterMaximumLength",
+							"ID": 824643026944,
+							"ClassID": 824639143936,
+							"Type": "Integer"
+						},
+						{
+							"Name": "CharacterOctetLength",
+							"ID": 824643158016,
+							"ClassID": 824639143936,
+							"Type": "Integer"
+						},
+						{
+							"Name": "NumericPrecision",
+							"ID": 824643289088,
+							"ClassID": 824639143936,
+							"Type": "Integer"
+						},
+						{
+							"Name": "NumericPrecisionRadix",
+							"ID": 824643420160,
+							"ClassID": 824639143936,
+							"Type": "Integer"
+						},
+						{
+							"Name": "NumericScale",
+							"ID": 824643551232,
+							"ClassID": 824639143936,
+							"Type": "Integer"
+						},
+						{
+							"Name": "DatetimePrecision",
+							"ID": 824643682304,
+							"ClassID": 824639143936,
+							"Type": "Integer"
+						},
+						{
+							"Name": "CharacterSetCatalog",
+							"ID": 824643813376,
+							"ClassID": 824639143936,
+							"Type": "Text"
+						},
+						{
+							"Name": "CharacterSetSchema",
+							"ID": 824643944448,
+							"ClassID": 824639143936,
+							"Type": "Text"
+						},
+						{
+							"Name": "CharacterSetName",
+							"ID": 824644075520,
+							"ClassID": 824639143936,
+							"Type": "Text"
+						},
+						{
+							"Name": "CollationCatalog",
+							"ID": 824644206592,
+							"ClassID": 824639143936,
+							"Type": "Text"
+						},
+						{
+							"Name": "CollationSchema",
+							"ID": 824644337664,
+							"ClassID": 824639143936,
+							"Type": "Text"
+						},
+						{
+							"Name": "CollationName",
+							"ID": 824644468736,
+							"ClassID": 824639143936,
+							"Type": "Text"
+						},
+						{
+							"Name": "DomainCatalog",
+							"ID": 824644599808,
+							"ClassID": 824639143936,
+							"Type": "Text"
+						},
+						{
+							"Name": "DomainSchema",
+							"ID": 824644730880,
+							"ClassID": 824639143936,
+							"Type": "Text"
+						},
+						{
+							"Name": "DomainName",
+							"ID": 824644861952,
+							"ClassID": 824639143936,
+							"Type": "Text"
+						}
+					]
+				},
+				{
+					"Name": "ConstraintColumnUsage",
+					"ID": 824639162368,
+					"Attributes": [
+						{
+							"Name": "TableCatalog",
+							"ID": 824644993024,
+							"ClassID": 824639162368,
+							"Type": "Text"
+						},
+						{
+							"Name": "TableSchema",
+							"ID": 824645124096,
+							"ClassID": 824639162368,
+							"Type": "Text"
+						},
+						{
+							"Name": "TableName",
+							"ID": 824645255168,
+							"ClassID": 824639162368,
+							"Type": "Text"
+						},
+						{
+							"Name": "ColumnName",
+							"ID": 824645386240,
+							"ClassID": 824639162368,
+							"Type": "Text"
+						},
+						{
+							"Name": "ConstraintCatalog",
+							"ID": 824645517312,
+							"ClassID": 824639162368,
+							"Type": "Text"
+						},
+						{
+							"Name": "ConstraintSchema",
+							"ID": 824645648384,
+							"ClassID": 824639162368,
+							"Type": "Text"
+						},
+						{
+							"Name": "ConstraintName",
+							"ID": 824645779456,
+							"ClassID": 824639162368,
+							"Type": "Text"
+						}
+					]
+				},
+				{
+					"Name": "ReferentialConstraint",
+					"ID": 824639180800,
+					"Attributes": [
+						{
+							"Name": "ConstraintCatalog",
+							"ID": 824645910528,
+							"ClassID": 824639180800,
+							"Type": "Text"
+						},
+						{
+							"Name": "ConstraintSchema",
+							"ID": 824646041600,
+							"ClassID": 824639180800,
+							"Type": "Text"
+						},
+						{
+							"Name": "ConstraintName",
+							"ID": 824646172672,
+							"ClassID": 824639180800,
+							"Type": "Text"
+						},
+						{
+							"Name": "UniqueConstraintCatalog",
+							"ID": 824646303744,
+							"ClassID": 824639180800,
+							"Type": "Text"
+						},
+						{
+							"Name": "UniqueConstraintSchema",
+							"ID": 824646434816,
+							"ClassID": 824639180800,
+							"Type": "Text"
+						},
+						{
+							"Name": "UniqueConstraintName",
+							"ID": 824646565888,
+							"ClassID": 824639180800,
+							"Type": "Text"
+						},
+						{
+							"Name": "MatchOption",
+							"ID": 824646696960,
+							"ClassID": 824639180800,
+							"Type": "Text"
+						},
+						{
+							"Name": "UpdateRule",
+							"ID": 824646828032,
+							"ClassID": 824639180800,
+							"Type": "Text"
+						},
+						{
+							"Name": "DeleteRule",
+							"ID": 824646959104,
+							"ClassID": 824639180800,
+							"Type": "Text"
+						}
+					]
+				}
+			]
+		}
+	]
+}

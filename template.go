@@ -2,8 +2,10 @@ package sqlmodelgen
 
 import (
 	"io"
+	"reflect"
 	"strings"
 	"text/template"
+	"unsafe"
 
 	"github.com/skillian/expr/errors"
 	"github.com/skillian/expr/stream/sqlstream"
@@ -68,6 +70,86 @@ func AddFuncs(t *template.Template, m template.FuncMap, mc ModelContext) *templa
 			m[k] = v
 		}
 	}
+	isTrue := func(src interface{}) bool {
+		switch src := src.(type) {
+		case bool:
+			return src
+		case int:
+			return src != 0
+		case int8:
+			return src != 0
+		case int16:
+			return src != 0
+		case int32:
+			return src != 0
+		case int64:
+			return src != 0
+		case uint:
+			return src != 0
+		case uint8:
+			return src != 0
+		case uint16:
+			return src != 0
+		case uint32:
+			return src != 0
+		case uint64:
+			return src != 0
+		case uintptr:
+			return src != 0
+		case float32:
+			return src != 0
+		case float64:
+			return src != 0
+		case complex64:
+			return real(src) != 0 || imag(src) != 0
+		case complex128:
+			return real(src) != 0 || imag(src) != 0
+		case string:
+			return len(src) != 0
+		case unsafe.Pointer:
+			return src != nil
+		}
+		rs := reflect.ValueOf(src)
+		if !rs.IsValid() {
+			return false
+		}
+		switch rs.Kind() {
+		case reflect.Array:
+			return rs.Len() != 0
+		case reflect.Chan, reflect.Func, reflect.Interface, reflect.Ptr:
+			return !rs.IsNil()
+		case reflect.Map, reflect.Slice:
+			return !rs.IsNil() && rs.Len() != 0
+		}
+		panic(errors.Errorf1("unknown kind: %[1]v (type: %[1]T)", src))
+	}
+	add(m, "any", func(src interface{}) bool {
+		if !isTrue(src) {
+			return false
+		}
+		rs := reflect.ValueOf(src)
+		switch rs.Kind() {
+		case reflect.Array, reflect.Slice:
+			length := rs.Len()
+			for i := 0; i < length; i++ {
+				if isTrue(rs.Index(i).Interface()) {
+					return true
+				}
+			}
+			return false
+		case reflect.Map:
+			mr := rs.MapRange()
+			for {
+				if !mr.Next() {
+					return false
+				}
+				if isTrue(mr.Value().Interface()) {
+					return true
+				}
+			}
+		}
+		return true
+	})
 	if _, ok := m["dyntemplate"]; !ok {
 		add(m, "dyntemplate", CreateDynTemplate(t))
 	}

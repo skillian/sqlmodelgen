@@ -55,8 +55,8 @@ type puWVJSONAttribute struct {
 	ID             int64
 	ClassID        int64
 	Type           string
-	Length         int64 `json:"omitempty"`
-	RelatedClassID int64 `json:"omitempty"`
+	Length         int64 `json:",omitempty"`
+	RelatedClassID int64 `json:",omitempty"`
 }
 
 func (puWVJSONContext) WriteTemplateData(w io.Writer, td TemplateData) (err error) {

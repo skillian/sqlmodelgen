@@ -1,0 +1,14 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+using U = Hyland.Unity;
+using WV = Hyland.Unity.WorkView;
+
+{{if .Namespaces}}{{range .Namespaces}}{{if .}}using {{.}};{{end}}
+{{end}}
+{{end}}
+namespace Paperless.Unity
+{{{$root := .}}
+{{range .Databases}}{{template "database.txt" (dict "root" $root "database" .)}}{{end}}
+}

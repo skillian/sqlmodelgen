@@ -1,0 +1,8 @@
+{{$root := .root}}{{$database := .database}}		public partial class {{$table.ModelName}} : Paperless.Unity.WorkView.Object{{/* TODO: Add support for base classes? */}}
+		{
+			new public static Paperless.Unity.WorkView.ClassKey ClassKey { get; }
+				= new Paperless.Unity.WorkView.ClassKey(
+					applicationName: String.Intern("{{$table.Schema.Database.RawName}}"),
+					className: String.Intern("{{$table.RawName}}")
+				);
+		}

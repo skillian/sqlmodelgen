@@ -6,7 +6,6 @@ import (
 	"io/fs"
 	"text/template"
 
-	//"github.com/skillian/expr/errors"
 	"github.com/skillian/expr/errors"
 	"github.com/skillian/expr/stream/sqlstream"
 	"github.com/skillian/expr/stream/sqlstream/config"
@@ -57,6 +56,7 @@ type NamespaceOrganizer interface {
 type TemplateData struct {
 	Namespace  string
 	Namespaces []string
+	Parameters map[string]string
 	*sqlstream.MetaModel
 }
 
@@ -84,7 +84,8 @@ func TemplateDataFromMetaModel(mm *sqlstream.MetaModel, mc ModelContext) (Templa
 		}
 	}
 	td := TemplateData{
-		MetaModel: mm,
+		MetaModel:  mm,
+		Parameters: make(map[string]string, 4),
 	}
 	if ens, ok := mc.(NamespaceEnsurer); ok {
 		for _, ns := range ens.EnsureNamespaces(mm) {

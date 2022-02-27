@@ -1,0 +1,22 @@
+{{$Parameters := .Parameters}}{{range .Databases}}{{if .SQLName}}IF NOT EXISTS (
+	SELECT 1 FROM sys.databases WHERE "name" = '{{.SQLName}}'
+)
+BEGIN
+	CREATE DATABASE "{{.SQLName}}"
+	ON (
+		NAME = {{.SQLName}}_dat,
+		FILENAME = '{{if $Parameters.datfilepath}}{{$Parameters.datfilepath}}\{{end}}{{.SQLName}}.mdf',
+		SIZE = {{if $Parameters.datsize}}{{$Parameters.datsize}}{{else}}8MB{{end}},
+		FILEGROWTH = {{if $Parameters.datgrowth}}{{$Parameters.datgrowth}}{{else}}100%{{end}}
+	)
+	LOG ON (
+		NAME = {{.SQLName}}_log,
+		FILENAME = '{{if $Parameters.logfilepath}}{{$Parameters.logfilepath}}\{{end}}{{.SQLName}}.ldf',
+		SIZE = {{if $Parameters.logsize}}{{$Parameters.logsize}}{{else}}8MB{{end}},
+		FILEGROWTH = {{if $Parameters.loggrowth}}{{$Parameters.loggrowth}}{{else}}100%{{end}}
+	)
+END;
+
+GO
+
+{{end}}{{end}}{{range .Databases}}{{template "database.txt" .}}{{end}}

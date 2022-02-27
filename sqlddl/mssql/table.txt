@@ -1,0 +1,9 @@
+IF NOT EXISTS (
+	SELECT 1 FROM sys.tables WHERE "name" = '{{.SQLName}}'
+)
+BEGIN
+	CREATE TABLE {{if .Schema.SQLName}}"{{.Schema.SQLName}}".{{end}}"{{.SQLName}}" (
+{{range $ColumnIndex, $Column := .Columns}}{{if (gt $ColumnIndex 0)}},
+{{end}}		"{{$Column.SQLName}}" {{modeltype $Column.Type}}{{if .Table.PK}}{{if (eq .Table.PK.Column $Column)}} PRIMARY KEY IDENTITY(1, 1){{end}}{{end}}{{end}}
+	);
+END;

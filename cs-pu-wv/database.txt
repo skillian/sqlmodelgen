@@ -1,0 +1,4 @@
+{{$root := .root}}{{$database := .database}}{{range .Schemas}}	namespace {{$root.Namespace}}{{if $database.ModelName}}.{{$database.ModelName}}{{end}}{{if .ModelName}}.{{.ModelName}}{{end}}
+{
+{{range .Tables}}{{template "table.txt" (dict "root" $root "table" .)}}
+{{end}}{{end}}}
