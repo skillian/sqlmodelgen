@@ -1,5 +1,5 @@
 {{range .Columns}}{{if .FK}}IF NOT EXISTS (
-	SELECT 1 FROM sys.foreign_keys = 'FK_{{.Table.SQLName}}_{{.SQLName}}_{{.FK.Column.Table.SQLName}}_{{.FK.Column.SQLName}}'
+	SELECT 1 FROM sys.foreign_keys WHERE "name" = 'FK_{{.Table.SQLName}}_{{.SQLName}}_{{.FK.Column.Table.SQLName}}_{{.FK.Column.SQLName}}'
 ){{/* TODO: Maybe use the FK name itself? */}}
 BEGIN
 	ALTER TABLE "{{.Table.SQLName}}" ADD FOREIGN KEY ("{{.SQLName}}") REFERENCES "{{.FK.Column.Table.SQLName}}"("{{.FK.Column.SQLName}}");
